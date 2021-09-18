@@ -1,0 +1,6 @@
+*.FASL
+*.fasl
+*.lisp-temp
+*~
+*#
+.#*
