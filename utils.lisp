@@ -13,10 +13,6 @@
 
 (defstruct atomic-reference (val nil))
 
-(defun atomic-reference-get (ref)
-  (declare (optimize (speed 3) (safety 0)))
-  (atomic-reference-val ref))
-
 (defun hash (x)
   (declare (optimize (speed 3) (safety 0)))
   (sxhash x))
@@ -31,11 +27,7 @@
 (defun copy-simple-array (arr)
   (declare (optimize (speed 3) (safety 0))
 	   (type (simple-array t) arr))
-  (let* ((len (length arr))
-	 (r (make-array len)))
-    (dotimes (i len)
-      (setf (aref r i) (aref arr i)))
-    r))
+  (copy-seq arr))
 
 (defun array-copy (src src-pos dest dest-start length)
   (declare (optimize (speed 3) (safety 0))

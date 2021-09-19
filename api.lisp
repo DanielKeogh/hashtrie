@@ -28,3 +28,8 @@
 (defun tri-length (hash-trie)
   "The number of pairs in the hash-trie"
   (map-count hash-trie))
+
+(defmacro with-transient ((name map) &body body)
+  `(let ((,name (htr::phm-as-transient ,map)))
+     (progn ,@body)
+     (htr::thm-persistent map)))

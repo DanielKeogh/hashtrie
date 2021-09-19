@@ -113,7 +113,7 @@
 (defun phm-as-transient (map)
   (declare (optimize (speed 3) (safety 0)))
   (make-transient-hash-map
-   :edit (make-atomic-reference :val t) ;; TODO: thread-safety
+   :edit (make-atomic-reference :val t)
    :count (phm-count map)
    :root (phm-root map)
    :has-null (phm-has-null map)
@@ -147,7 +147,7 @@
 				     0 (hash key) key val added-leaf)))
 	  (if (eq new-root root)
 	      m
-	      (make-persistent-hash-map :meta meta 
+	      (make-persistent-hash-map :meta meta
 					:count (if (box-val added-leaf)
 						   (1+ count)
 						   count)
@@ -179,7 +179,7 @@
 	    (lambda ()
 	      (if returned-nil
 		  (funcall itr)
-		  (progn 
+		  (progn
 		    (setf returned-nil t)
 		    (values t nil null-value)))))
 	  itr))))
@@ -272,7 +272,7 @@
 
 (defun thm-ensure-editable (map)
   (declare (optimize (speed 3) (safety 0)))
-  (unless (atomic-reference-get (thm-edit map))
+  (unless (atomic-reference-val (thm-edit map))
     (error "Transient used after persistent call")))
 
 (defun thm-do-persistent (map)
@@ -334,7 +334,7 @@
       this
     (let* ((idx (mask hash shift))
 	   (node (aref array idx)))
-      
+
       (if (null node)
 	  (let ((new-node (node-assoc *empty-hash-map-node*
 				      (shift-right shift) hash key val added-leaf)))
@@ -342,7 +342,7 @@
 	     :edit nil
 	     :count (1+ count)
 	     :array (clone-and-set array idx new-node)))
-	  
+
 	  (let ((n (node-assoc node (shift-right shift) hash key val added-leaf)))
 	    (if (eq n node)
 		this
@@ -918,7 +918,7 @@
 					       (multiple-value-list (funcall itr))
 					       (list nil nil nil))
 		  then (multiple-value-list (funcall itr))
-	       
+
 		for cnt from 0
 		while (and remaining (< cnt 1000))
 		do (prin1 key stream)

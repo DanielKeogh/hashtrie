@@ -2,9 +2,9 @@
 
 (asdf:defsystem #:hashtrie
   :description "An implementation of the Hash Trie datastructure, based on Clojure's"
-  :author "Daniel Keogh <your.name@example.com>"
-  :license  "Eclipse 1.0"
-  :version "0.0.1"
+  :author "Daniel Keogh"
+  :license  "Eclipse 2.0"
+  :version "1.0.0"
   :serial t
   :components ((:file "package")
 	       (:file "utils")

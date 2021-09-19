@@ -45,7 +45,7 @@
     (is (loop for i from 0 below 1000
 	      always (htr:tri-has-key map i)))))
 
-(test tri-has-key-not 
+(test tri-has-key-not
   (let ((map (htr:make-hash-trie)))
     (dotimes (i 1000)
       (setf map (htr:tri-add map i i)))
