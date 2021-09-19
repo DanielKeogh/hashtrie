@@ -90,3 +90,19 @@
     (dotimes (i 1000)
       (setf map (htr:tri-remove map i)))
     (is (= 0 (htr:tri-length map)))))
+
+(test tri-map
+  (let ((map (htr:make-hash-trie)))
+    (dotimes (i 1000)
+      (setf map (htr:tri-add map i i)))))
+
+(test with-transient
+  (let ((map (htr:with-transient (trans (htr:make-hash-trie))
+	       (dotimes (i 1000)
+		 (htr:tri-add trans i i)))))
+    (is (= 1000 (htr:tri-length map)))
+    (let ((map2 (htr:with-transient (trans map)
+		  (dotimes (i 1000)
+		    (htr:tri-remove trans i)))))
+      (is (= 1000 (htr:tri-length map)))  
+      (is (= 0 (htr:tri-length map2))))))
