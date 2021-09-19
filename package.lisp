@@ -5,6 +5,7 @@
   (:use #:cl)
   (:nicknames #:htr)
   (:export
+   ;; Important functions
    :make-hash-trie
    :with-transient
    :tri-add
