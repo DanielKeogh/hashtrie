@@ -30,20 +30,20 @@
 				 (:include hash-map-node))
   (edit nil)
   (bitmap nil :type fixnum)
-  (array nil :type (simple-array t)))
+  (array nil :type (simple-array t (*))))
 
 (defstruct (hash-map-array-node (:conc-name hman-)
 				(:include hash-map-node))
   (edit nil)
   (count nil :type fixnum)
-  (array nil :type (simple-array t)))
+  (array nil :type (simple-array t (*))))
 
 (defstruct (hash-map-collision-node (:conc-name hmcn-)
 				    (:include hash-map-node))
   (edit nil)
   (hash nil :type fixnum :read-only t)
   (count nil :type fixnum)
-  (array nil :type (simple-array t)))
+  (array nil :type (simple-array t (*))))
 
 (defgeneric map-assoc (hash-map key val))
 (defgeneric map-make-iterator (hash-map))
@@ -78,10 +78,10 @@
   (the fixnum (ash 1 (the (unsigned-byte 62) (mask hash shift)))))
 
 (defun clone-and-set (array i new-val &optional j new-val2)
-  (declare (type (simple-array t) array)
+  (declare (type (simple-array t (*)) array)
 	   (optimize (speed 3) (safety 0)))
   (let ((new-array (copy-simple-array array)))
-    (declare (type (simple-array t) new-array))
+    (declare (type (simple-array t (*)) new-array))
     (setf (aref new-array i) new-val)
     (when j
       (setf (aref new-array j) new-val2))
@@ -745,7 +745,7 @@
 
 (defun node-make-array-iterator (array)
   (declare (optimize (speed 3) (safety 0))
-	   (type (simple-array t) array))
+	   (type (simple-array t (*)) array))
   (let ((i 0)
 	nested-itr)
     (declare (type fixnum i))

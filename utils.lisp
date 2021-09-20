@@ -15,7 +15,7 @@
 
 (defun hash (x)
   (declare (optimize (speed 3) (safety 0)))
-  (sxhash x))
+   (sxhash x))
 
 (defmacro logandcount (n1 n2)
   `(logcount (logand ,n1 ,n2)))
@@ -26,12 +26,12 @@
 
 (defun copy-simple-array (arr)
   (declare (optimize (speed 3) (safety 0))
-	   (type (simple-array t) arr))
+	   (type (simple-array t (*)) arr))
   (copy-seq arr))
 
 (defun array-copy (src src-pos dest dest-start length)
   (declare (optimize (speed 3) (safety 0))
-	   (type (simple-array t) src dest)
+	   (type (simple-array t (*)) src dest)
 	   (type fixnum src-pos dest-start length))
   (loop for cnt fixnum from 0 below length
 	for src-index fixnum from src-pos
@@ -40,7 +40,7 @@
 
 (defun remove-pair (array i)
   (declare (optimize (speed 3) (safety 0))
-	   (type (simple-array t) array)
+	   (type (simple-array t (*)) array)
 	   (type fixnum i))
   (let ((new-array (make-array (- (length array) 2))))
     (array-copy array 0 new-array 0 (the fixnum (* 2 i)))
