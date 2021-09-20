@@ -2,6 +2,8 @@
 
 A fast [Hash trie](https://en.wikipedia.org/wiki/Hash_tree_(persistent_data_structure)) implementation based upon Clojure's.
 
+A Hash Trie works like a Hash Set, except that it has been optimised for immutability.
+
 By default, hash-trie's are persistent and immutable, but this implementation also supports transients for building sets slightly faster.
 
 ## Usage
