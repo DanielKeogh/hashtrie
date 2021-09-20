@@ -219,6 +219,7 @@
 		   (null-value thm-null-value)
 		   (count thm-count)
 		   (leaf-flag thm-leaf-flag)
+		   (edit thm-edit)
 		   (root thm-root))
       map
     (if (not key)
@@ -229,8 +230,9 @@
 	;; else
 	(progn
 	  (setf (box-val leaf-flag) nil)
-	  (let ((n (node-assoc (or root *empty-hash-map-node*)
-			       0 (hash key) key val leaf-flag)))
+	  (let ((n (node-assoc-edit (or root *empty-hash-map-node*)
+				    edit
+				    0 (hash key) key val leaf-flag)))
 	    (unless (equal n root)
 	      (setf root n))
 	    (when (eq (box-val leaf-flag) leaf-flag) (incf count))))))
