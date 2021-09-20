@@ -70,7 +70,7 @@
 (defun mask (hash shift)
   (declare (type (unsigned-byte 62) shift hash)
 	   (optimize (speed 3) (safety 0)))
-  (logand (ash hash (the fixnum (* -1 shift))) 31))
+  (logand (ash hash (the fixnum (* -1 shift))) +mask+))
 
 (defun bitpos (hash shift)
   (declare (type fixnum hash shift)
@@ -578,11 +578,11 @@
 		 editable))
 
 	      ((>= n 16)
-	       (let* ((nodes (make-array 32 :initial-element nil))
+	       (let* ((nodes (make-array +size+ :initial-element nil))
 		      (jdx (mask hash shift))
 		      (j 0))
 		 (setf (aref nodes jdx) (node-assoc-edit *empty-hash-map-node* edit (shift-right shift) hash key val added-leaf))
-		 (dotimes (i 32)
+		 (dotimes (i +size+)
 		   (when (/= 0 (logand (ash bitmap (- i)) 1)) ;; TODO logbitp
 		     (if (null (aref array j))
 			 (setf (aref nodes i) (aref array (1+ j)))
@@ -638,12 +638,12 @@
 	  ;; else
 	  (let ((n (the fixnum (logcount bitmap))))
 	    (if (>= n 16)
-		(let* ((nodes (make-array 32 :initial-element nil))
+		(let* ((nodes (make-array +size+ :initial-element nil))
 		       (jdx (mask hash shift))
 		       (j 0))
 		  (declare (type fixnum j))
 		  (setf (aref nodes jdx) (node-assoc *empty-hash-map-node* (shift-right shift) hash key val added-leaf))
-		  (dotimes (i 32)
+		  (dotimes (i +size+)
 		    (when (/= 0 (logand (ash bitmap (- i)) 1))
 		      (if (null (aref array j))
 			  (setf (aref nodes i) (aref array (1+ j)))

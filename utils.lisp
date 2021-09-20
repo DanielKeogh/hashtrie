@@ -2,6 +2,10 @@
 
 (in-package #:hashtrie)
 
+(defconstant +bits+ 5)
+(defconstant +size+ (expt 2 +bits+))
+(defconstant +mask+ (1- +size+))
+
 (defun make-box ()
   (declare (optimize (speed 3) (safety 0)))
   (cons nil nil))
@@ -9,7 +13,7 @@
 (defmacro box-val (b) `(car ,b))
 
 (defmacro shift-right (i)
-  `(the fixnum (+ 5 ,i)))
+  `(the fixnum (+ +bits+ ,i)))
 
 (defstruct atomic-reference (val nil))
 
