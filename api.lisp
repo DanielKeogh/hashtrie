@@ -9,7 +9,7 @@
   (map-assoc hash-trie key val))
 
 (defun tri-remove (hash-trie key)
-  "Remove the pair from the hash-trie"
+  "Remove the pair from the hash trie"
   (map-without hash-trie key))
 
 (defun tri-val (hash-trie key &optional not-found)
@@ -17,7 +17,7 @@
   (map-val-at hash-trie key not-found))
 
 (defun tri-has-key (hash-trie key)
-  "Is the key?"
+  "Test if the key is in the hash trie"
   (let ((missing (gensym)))
     (not (equal missing (map-val-at hash-trie key missing)))))
 
@@ -26,11 +26,11 @@
   (map-map hash-trie fn))
 
 (defun tri-reduce (hash-trie fn &optional start-val)
-  "Apply (lambda (start key val)) to aggregate all pairs of a persistent hash map."
+  "Apply (lambda (start key val)) to aggregate all pairs of a persistent hash map"
   (map-reduce hash-trie fn start-val))
 
 (defun tri-length (hash-trie)
-  "The number of pairs in the hash-trie"
+  "The number of pairs in the hash trie"
   (map-count hash-trie))
 
 (defmacro with-transient ((name map) &body body)
