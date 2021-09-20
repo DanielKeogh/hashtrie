@@ -96,7 +96,18 @@
     (dotimes (i 1000)
       (setf map (htr:tri-add map i i)))))
 
-(test with-transient
+(test with-transient-10
+  (let ((map (htr:with-transient (trans (htr:make-hash-trie))
+	       (dotimes (i 10)
+		 (htr:tri-add trans i i)))))
+    (is (= 10 (htr:tri-length map)))
+    (let ((map2 (htr:with-transient (trans map)
+		  (dotimes (i 10)
+		    (htr:tri-remove trans i)))))
+      (is (= 10 (htr:tri-length map)))  
+      (is (= 0 (htr:tri-length map2))))))
+
+(test with-transient-1000
   (let ((map (htr:with-transient (trans (htr:make-hash-trie))
 	       (dotimes (i 1000)
 		 (htr:tri-add trans i i)))))
@@ -106,3 +117,29 @@
 		    (htr:tri-remove trans i)))))
       (is (= 1000 (htr:tri-length map)))  
       (is (= 0 (htr:tri-length map2))))))
+
+(test tri-map-10
+  (let ((map (htr:with-transient (trans (htr:make-hash-trie))
+	       (dotimes (i 10)
+		 (htr:tri-add trans i i)))))
+
+    (is (= (loop for i from 0 below 10 sum i)
+	 (reduce (lambda (x y) (+ x y))
+		 (htr:tri-map map (lambda (key val) (declare (ignore key)) val)))))
+
+    (is (= (loop for i from 0 below 10 sum i)
+	 (reduce (lambda (x y) (+ x y))
+		 (htr:tri-map map (lambda (key val) (declare (ignore val)) key)))))))
+
+(test tri-map-10-transient
+  (htr:with-transient (map (htr:make-hash-trie))
+    (dotimes (i 10)
+      (htr:tri-add map i i))
+
+    (is (= (loop for i from 0 below 10 sum i)
+	   (reduce (lambda (x y) (+ x y))
+		   (htr:tri-map map (lambda (key val) (declare (ignore key)) val)))))
+
+    (is (= (loop for i from 0 below 10 sum i)
+	   (reduce (lambda (x y) (+ x y))
+		   (htr:tri-map map (lambda (key val) (declare (ignore val)) key)))))))
