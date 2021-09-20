@@ -57,6 +57,15 @@ Mapping:
 ;; (101 202 303)
 ```
 
+Reduce:
+
+```lisp
+(htr:tri-reduce (htr:make-hash-trie 1 0 2 0 3 0)
+	     	(lambda (start key val) (+ start key val))
+		0)
+;; 6
+```
+
 ## Other important info
 
 This library currently uses `sxhash` and `equal` for comparison. Alternative hashing/comparison functions are not supported.

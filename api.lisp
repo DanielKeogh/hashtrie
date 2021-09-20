@@ -25,6 +25,10 @@
   "Apply a (lambda (x y)) to each key-value pair and collect the results into a list"
   (map-map hash-trie fn))
 
+(defun tri-reduce (hash-trie fn &optional start-val)
+  "Apply (lambda (start key val)) to aggregate all pairs of a persistent hash map."
+  (map-reduce hash-trie fn start-val))
+
 (defun tri-length (hash-trie)
   "The number of pairs in the hash-trie"
   (map-count hash-trie))

@@ -650,7 +650,7 @@
 			  (setf (aref nodes i) (node-assoc *empty-hash-map-node* (shift-right shift) (hash (aref array j)) (aref array j) (aref array (1+ j)) added-leaf)))
 		      (incf j 2)))
 		  (make-hash-map-array-node :count (1+ n) :array nodes))
-					; else
+		;; else
 		(let ((new-array (make-array (* 2 (1+ n)) :initial-element nil)))
 		  (array-copy array 0 new-array 0 (the fixnum (* 2 idx)))
 		  (setf (aref new-array (* 2 idx)) key)
@@ -932,28 +932,21 @@
 		   (when nremaining (princ ", " stream)))
 	  (write-char #\} stream)))))
 
-;; Iteration-utils
-;; These are just here for some quick and dirty tests,
-;; and not to be exported in the api.
-
 (defun map-map (map fn)
   (declare (optimize (speed 3) (safety 0)))
   (check-type fn function)
   (check-type map hash-trie)
-  "Apply (lambda (key val)) to all pairs in a persistent hash map and collect the result into a list."
   (loop with itr of-type (function ()) = (map-make-iterator map)
 	for (remaining key val) = (multiple-value-list (funcall itr))
 	while remaining collect (funcall fn key val)))
 
 (defun map-reduce (map fn &optional start-val)
-  "Apply (lambda (start key val)) to aggregate all pairs of a persistent hash map."
+  (declare (optimize (speed 3) (safety 0)))
+  (check-type fn function)
+  (check-type map hash-trie)
   (loop with itr = (map-make-iterator map)
 	for (remaining key val) = (multiple-value-list (funcall itr))
 	while remaining
 	for result = (funcall fn start-val key val)
 	  then (funcall fn result key val)
 	finally (return result)))
-
-(defun map-keys (map fn)
-  "Apply (lambda (key)) to all keys in a persistent hash map and collect the result into a list"
-  (map-map map (lambda (key val) (declare (ignore val)) (funcall fn key))))

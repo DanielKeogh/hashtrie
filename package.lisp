@@ -13,6 +13,7 @@
    :tri-val
    :tri-has-key
    :tri-map
+   :tri-reduce
    :tri-length
    :*max-print-length*
 
