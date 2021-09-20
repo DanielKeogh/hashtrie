@@ -127,11 +127,24 @@ CL-USER> (time (loop for i from 0 to 1000000
 ;  132,035,232 bytes consed
 ```
   
-Also comparing the performance to clojure, this implementation is worse still. Not sure why yet, but I have time on my side.
+Also comparing the performance to clojure. Building a hash trie in sbcl is still slightly slower than doing the same in clojure, but not by much.
 
 ```clojure
 ;Clojure 1.10.2
-(defn init-set [set n] (if (> n 0) (recur (assoc set n n) (dec n)) set))
-(time (count (init-set {} 1000000)))
+(defn persistent-build-map [set n]
+     (if (> n 0)
+     	 (recur (assoc set n n) (dec n))
+	 set))
+
+(defn transient-build-map [n]
+      (loop [i 0 v (transient {})]
+      	    (if (< i n)
+      	    (recur (inc i) (assoc! v i i))
+      	    (persistent! v))))
+
+(time (count (persistent-build-map {} 1000000)))
 ;"Elapsed time: 606.96371 msecs"
+
+(time (count (transient-build-map 1000000)))
+"Elapsed time: 502.676784 msecs"
 ```
