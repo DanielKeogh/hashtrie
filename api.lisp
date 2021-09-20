@@ -5,7 +5,7 @@
 (proclaim '(optimize (speed 3) (safety 0) (debug 0)))
 
 (defun tri-add (hash-trie key val)
-  "Create a new map with the given key-value pair."
+  "Create a new map with the given key-value pair"
   (map-assoc hash-trie key val))
 
 (defun tri-remove (hash-trie key)
