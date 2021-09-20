@@ -20,7 +20,7 @@ Construct with transience:
 ```lisp
 (htr:with-transient (trans (htr:make-hash-trie))
 	(htr:tri-add trans 1 "bar")
-	(htr:tri-add trans nil "foo")
+	(htr:tri-add trans nil "foo"))
 ;; {nil "foo", 1 "bar"}
 ```
 
