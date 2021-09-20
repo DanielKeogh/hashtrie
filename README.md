@@ -4,7 +4,7 @@ A fast [Hash trie](https://en.wikipedia.org/wiki/Hash_tree_(persistent_data_stru
 
 A Hash Trie works like a Hash Set, except that it has been optimised for immutability and thread-safety.
 
-By default, hash-trie's are persistent and immutable, but this implementation also supports transients for building sets slightly faster.
+By default, hash-trie's are persistent and immutable, but this implementation also supports transients for building sets significantly faster.
 
 ## Usage
 
