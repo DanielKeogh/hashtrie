@@ -34,6 +34,8 @@
   (map-count hash-trie))
 
 (defmacro with-transient ((name map) &body body)
+  "Within the body of this macro modify a temporary, transient copy of the hash trie. e.g. (with-transient (name (make-has-trie)) <body>). The transient copy will not be thread safe.
+Returns a new persistent hash trie"
   `(let ((,name (htr::phm-as-transient ,map)))
      (progn ,@body)
      (htr::thm-persistent ,name)))
