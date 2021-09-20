@@ -90,13 +90,26 @@ Running SBCL, for comparison between using hash-trie and SBCL's own implementati
 CL-USER> (time (loop for i from 0 to 1000000
 	       for map = (htr:make-hash-trie i i) then (htr:tri-add map i i)
 	       finally (return map)))
-Evaluation took:
-  1.158 seconds of real time
-  1.163023 seconds of total run time (1.002477 user, 0.160546 system)
-  [ Run times consist of 0.486 seconds GC time, and 0.678 seconds non-GC time. ]
-  100.43% CPU
-  2,306,805,783 processor cycles
-  1,279,064,720 bytes consed
+;Evaluation took:
+;  1.158 seconds of real time
+;  1.163023 seconds of total run time (1.002477 user, 0.160546 system)
+;  [ Run times consist of 0.486 seconds GC time, and 0.678 seconds non-GC time. ]
+;  100.43% CPU
+;  2,306,805,783 processor cycles
+;  1,279,064,720 bytes consed
+```
+
+```lisp
+(time (htr:with-transient (trans (htr:make-hash-trie))
+	   (dotimes (i 1000000)
+	     (htr:tri-add trans i i))))
+;Evaluation took:
+;  0.640 seconds of real time
+;  0.640942 seconds of total run time (0.557056 user, 0.083886 system)
+;  [ Run times consist of 0.297 seconds GC time, and 0.344 seconds non-GC time. ]
+;  100.16% CPU
+;  1,275,757,029 processor cycles
+;  190,686,512 bytes consed
 ```
 
 *hashset*
@@ -117,11 +130,8 @@ Evaluation took:
 Also comparing the performance to clojure, this implementation is worse still. Not sure why yet, but I have time on my side.
 
 ```clojure
-Clojure 1.10.2
-       (defn init-set [set n] (if (> n 0) (recur (assoc set n n) (dec n)) set))
-#'user/init-set
+;Clojure 1.10.2
+(defn init-set [set n] (if (> n 0) (recur (assoc set n n) (dec n)) set))
 (time (count (init-set {} 1000000)))
-"Elapsed time: 606.96371 msecs"
-1000000
-user=> 
+;"Elapsed time: 606.96371 msecs"
 ```
