@@ -87,7 +87,7 @@ This library currently uses `sxhash` and `equal` for comparison. Alternative has
 
 In theory should work on all Common Lisp implementations.
 
-Has only been tested on SBCL.
+Has only been tested on SBCL, and CLisp.
 
 ## Benchmarking
 
