@@ -3,7 +3,7 @@
 (asdf:defsystem #:hashtrie-tests
   :description "Tests for hashtrie"
   :author "Daniel Keogh"
-  :license  "Eclipse 1.0"
+  :license  "Eclipse 2.0"
   :depends-on (:hashtrie :fiveam)
   :components ((:module "tests"
 		:serial t
