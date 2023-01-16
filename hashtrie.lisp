@@ -68,7 +68,7 @@
 (defun mask (hash shift)
   (declare (type (unsigned-byte 62) shift hash)
 	   (optimize (speed 3) (safety 0)))
-  (logand (ash hash (the fixnum (* -1 shift))) +mask+))
+  (logand (ash hash (the fixnum (- shift))) +mask+))
 
 (defun bitpos (hash shift)
   (declare (type fixnum hash shift)

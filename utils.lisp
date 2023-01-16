@@ -2,9 +2,11 @@
 
 (in-package #:hashtrie)
 
-(defconstant +bits+ 5)
-(defconstant +size+ (expt 2 +bits+))
-(defconstant +mask+ (1- +size+))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declaim (type fixnum +bits+ +size+ +mask+))
+  (defconstant +bits+ 5)
+  (defconstant +size+ (expt 2 +bits+))
+  (defconstant +mask+ (1- +size+)))
 
 (defun make-box ()
   (declare (optimize (speed 3) (safety 0)))
