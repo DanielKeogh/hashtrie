@@ -17,6 +17,7 @@
 
 (defstruct atomic-reference (val nil))
 
+(declaim (inline hash))
 (defun hash (x)
   (declare (optimize (speed 3) (safety 0)))
    (sxhash x))
@@ -24,6 +25,7 @@
 (defmacro logandcount (n1 n2)
   `(logcount (logand ,n1 ,n2)))
 
+(declaim (inline equiv))
 (defun equiv (v1 v2)
   (declare (optimize (speed 3) (safety 0)))
   (equal v1 v2))

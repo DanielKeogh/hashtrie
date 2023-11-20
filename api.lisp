@@ -2,38 +2,44 @@
 
 (in-package #:hashtrie)
 
-(proclaim '(optimize (speed 3) (safety 0) (debug 0)))
-
 (defun tri-add (hash-trie key val)
+  (declare (optimize (speed 3) (safety 3)))
   "Create a new map with the given key-value pair"
   (map-assoc hash-trie key val))
 
 (defun tri-remove (hash-trie key)
+  (declare (optimize (speed 3) (safety 3)))
   "Remove the pair from the hash trie"
   (map-without hash-trie key))
 
 (defun tri-val (hash-trie key &optional not-found)
+  (declare (optimize (speed 3) (safety 3)))
   "Get the value for a given key"
   (map-val-at hash-trie key not-found))
 
 (defun tri-has-key (hash-trie key)
+  (declare (optimize (speed 3) (safety 3)))
   "Test if the key is in the hash trie"
   (let ((missing (gensym)))
     (not (equal missing (map-val-at hash-trie key missing)))))
 
 (defun tri-map (hash-trie fn)
+  (declare (optimize (speed 3) (safety 3)))
   "Apply a (lambda (x y)) to each key-value pair and collect the results into a list"
   (map-map hash-trie fn))
 
 (defun tri-reduce (hash-trie fn &optional start-val)
+  (declare (optimize (speed 3) (safety 3)))
   "Apply (lambda (start key val)) to aggregate all pairs of a persistent hash map"
   (map-reduce hash-trie fn start-val))
 
 (defun tri-length (hash-trie)
+  (declare (optimize (speed 3) (safety 3)))
   "The number of pairs in the hash trie"
   (map-count hash-trie))
 
 (defmacro with-transient ((name map) &body body)
+  (declare (optimize (speed 3) (safety 3)))
   "Within the body of this macro modify a temporary, transient copy of the hash trie. e.g. (with-transient (name (make-has-trie)) <body>). The transient copy will not be thread safe.
 Returns a new persistent hash trie"
   `(let ((,name (htr::phm-as-transient ,map)))

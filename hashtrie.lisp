@@ -2,8 +2,6 @@
 
 (in-package #:hashtrie)
 
-(proclaim '(optimize (speed 3) (safety 0) (debug 0)))
-
 (defparameter *max-print-length* 1000)
 
 (defstruct (hash-trie (:constructor nil)))
