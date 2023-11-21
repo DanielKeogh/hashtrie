@@ -8,7 +8,7 @@
 (defstruct (persistent-hash-map (:conc-name phm-)
 				(:include hash-trie))
   (meta nil :type (or null hash-trie))
-  (count nil :type fixnum :read-only t)
+  (count nil :type uint :read-only t)
   (root nil :type (or null hash-map-node) :read-only t)
   (has-null nil :type boolean :read-only t)
   (null-value nil :read-only t))
@@ -16,7 +16,7 @@
 (defstruct (transient-hash-map (:conc-name thm-)
 			       (:include hash-trie))
   (edit nil :read-only t)
-  (count nil :type fixnum)
+  (count nil :type uint)
   (root nil :type (or null hash-map-node))
   (has-null nil :type boolean)
   (null-value nil)
@@ -27,20 +27,20 @@
 (defstruct (hash-map-bitmap-node (:conc-name hmn-)
 				 (:include hash-map-node))
   (edit nil)
-  (bitmap nil :type fixnum)
+  (bitmap nil :type uint)
   (array nil :type (simple-array t (*))))
 
 (defstruct (hash-map-array-node (:conc-name hman-)
 				(:include hash-map-node))
   (edit nil)
-  (count nil :type fixnum)
+  (count nil :type uint)
   (array nil :type (simple-array t (*))))
 
 (defstruct (hash-map-collision-node (:conc-name hmcn-)
 				    (:include hash-map-node))
   (edit nil)
-  (hash nil :type fixnum :read-only t)
-  (count nil :type fixnum)
+  (hash nil :type uint :read-only t)
+  (count nil :type uint)
   (array nil :type (simple-array t (*))))
 
 (defgeneric map-assoc (hash-map key val))
@@ -60,20 +60,25 @@
 (defvar *empty-hash-map* (make-persistent-hash-map :count 0 :root nil :has-null nil :null-value nil))
 (defvar *not-found* (gensym))
 
+(declaim (inline hmn-index))
 (defun hmn-index (node bit)
-  (declare (type fixnum bit)
-	   (optimize (speed 3) (safety 0)))
+  (declare (optimize (speed 3) (safety 0))
+	   (type uint bit))
   (logandcount (hmn-bitmap node) (1- bit)))
 
+(declaim (inline mask))
 (defun mask (hash shift)
-  (declare (type (unsigned-byte 62) shift hash)
+  (declare (type uint hash)
+	   (type fixnum shift)
 	   (optimize (speed 3) (safety 0)))
-  (logand (ash hash (the fixnum (* -1 shift))) +mask+))
+  (the uint (logand (ash hash (the fixnum (* -1 shift))) +mask+)))
 
+(declaim (inline bitpos))
 (defun bitpos (hash shift)
-  (declare (type fixnum hash shift)
+  (declare (type uint hash)
+	   (type fixnum shift)
 	   (optimize (speed 3) (safety 0)))
-  (the fixnum (ash 1 (the (unsigned-byte 62) (mask hash shift)))))
+  (the uint (ash 1 (the uint (mask hash shift)))))
 
 (defun clone-and-set (array i new-val &optional j new-val2)
   (declare (type (simple-array t (*)) array)
@@ -87,8 +92,8 @@
 
 (defun create-node (shift key1 val1 key2hash key2 val2)
   (declare (optimize (speed 3) (safety 0))
-	   (type (unsigned-byte 62) key2hash))
-  (let ((key1hash (the (unsigned-byte 62) (hash key1))))
+	   (type uint key2hash))
+  (let ((key1hash (the uint (hash key1))))
     (if (= key1hash key2hash)
 	(make-hash-map-collision-node :edit nil :hash key1hash :count 2 :array (make-array 4 :initial-contents (list key1 val1 key2 val2)))
 	(let* ((added-leaf (make-box))
@@ -98,8 +103,8 @@
 
 (defun create-edit-node (edit shift key1 val1 key2hash key2 val2)
   (declare (optimize (speed 3) (safety 0))
-	   (type (unsigned-byte 62) key2hash))
-  (let ((key1hash (the (unsigned-byte 62) (hash key1))))
+	   (type uint key2hash))
+  (let ((key1hash (hash key1)))
     (if (= key1hash key2hash)
 	(make-hash-map-collision-node :edit nil :hash key1hash :count 2 :array (make-array 0 :initial-contents (list key1 val1 key2 val2)))
 	(let* ((added-leaf (make-box))
@@ -191,7 +196,7 @@
       map
     (cond ((null key) (if (phm-has-null map)
 			  (make-persistent-hash-map :meta meta
-						    :count (1- count)
+						    :count (the uint (1- count))
 						    :root root
 						    :has-null nil
 						    :null-value nil)))
@@ -200,7 +205,7 @@
 	       (if (eq root new-root)
 		   map
 		   (make-persistent-hash-map :meta meta
-					     :count (1- count)
+					     :count (the uint (1- count))
 					     :root new-root
 					     :has-null has-null
 					     :null-value nil)))))))
@@ -332,7 +337,8 @@
 ;;; hash-map-array-node
 
 (defmethod node-assoc ((this hash-map-array-node) shift hash key val added-leaf)
-  (declare (type fixnum shift hash)
+  (declare (type fixnum shift)
+	   (type uint hash)
 	   (optimize (speed 3) (safety 0)))
   (with-accessors ((array hman-array)
 		   (count hman-count))
@@ -390,31 +396,32 @@
 
 (defun hman-pack (node edit idx)
   (declare (optimize (speed 3) (safety 0))
-	   (type fixnum idx))
+	   (type uint idx))
   (with-accessors ((count hman-count)
 		   (array hman-array))
       node
     (let ((new-array (make-array (* 2 (1- count)) :initial-element nil))
 	  (j 1)
 	  (bitmap 0))
-      (declare (type fixnum bitmap))
+      (declare (type uint bitmap))
       (dotimes (i idx)
-	(declare (type fixnum i))
+	(declare (type uint i))
 	(when (aref array i)
 	  (setf (aref new-array j) (aref array i))
-	  (setf bitmap (logior bitmap (the fixnum (ash 1 i))))
+	  (setf bitmap (logior bitmap (the uint (ash 1 i))))
 	  (incf j 2)))
       (loop for i from (1+ idx) below (length array)
 	    for v = (aref array i)
 	    when v do
 	      (setf (aref new-array j) v)
-	      (setf bitmap (logior bitmap (the fixnum (ash 1 i))))
+	      (setf bitmap (logior bitmap (the uint (ash 1 i))))
 	      (incf j 2))
       (make-hash-map-bitmap-node :edit edit :bitmap bitmap :array new-array))))
 
 (defmethod node-without-edit ((this hash-map-array-node) edit shift hash key removed-leaf)
   (declare (optimize (speed 3) (safety 0))
-	   (type fixnum shift))
+	   (type fixnum shift)
+	   (type uint hash))
   (with-accessors ((array hman-array)
 		   (count hman-count))
       this
@@ -472,7 +479,7 @@
       node
     (let ((i 0)
 	  nested-itr)
-      (declare (type fixnum i))
+      (declare (type uint i))
       (lambda ()
 	(loop while t do
 	  (cond (nested-itr
@@ -513,18 +520,18 @@
 
 (defun hmn-edit-and-remove-pair (node edit bit i)
   (declare (optimize (speed 3) (safety 0))
-	   (type fixnum bit i))
+	   (type uint bit i))
   (with-accessors ((bitmap hmn-bitmap))
       node
-    (when (/= (the fixnum bitmap) bit)
+    (when (/= (the uint bitmap) bit)
       (let* ((editable (hmn-ensure-editable node edit))
 	     (array (hmn-array editable))
 	     (array-len (length array)))
 	(setf (hmn-bitmap editable) (logxor (hmn-bitmap editable) bit))
-	(let* ((new-len (* 2 (the fixnum (1+ i))))
+	(let* ((new-len (* 2 (the uint (1+ i))))
 	       (i2 (* 2 i))
 	       (remaining (- array-len new-len)))
-	  (declare (type fixnum i2 remaining new-len))
+	  (declare (type uint i2 remaining new-len))
 	  (array-copy array new-len array i2 remaining))
 	(setf (aref array (- array-len 2)) nil)
 	(setf (aref array (- array-len 1)) nil)
@@ -538,7 +545,7 @@
       node
     (let* ((bit (bitpos hash shift))
 	   (idx (hmn-index node bit)))
-      (declare (type fixnum bit idx))
+      (declare (type uint bit idx))
       (if (/= 0 (logand bitmap bit))
 	  (let ((key-or-null (aref array (* 2 idx)))
 		(value-or-node (aref array (1+ (* 2 idx)))))
@@ -555,10 +562,10 @@
 	      (t
 	       (setf (box-val added-leaf) added-leaf)
 	       (let ((2i (* 2 idx)))
-		 (declare (type fixnum 2i))
+		 (declare (type uint 2i))
 		 (hmn-edit-and-set node edit
 				   2i nil
-				   (the fixnum (1+ 2i))
+				   (the uint (1+ 2i))
 				   (create-edit-node edit (shift-right shift) key-or-null value-or-node hash key val))))))
 	  ;; else
 	  (let ((n (logcount bitmap)))
@@ -568,10 +575,10 @@
 	       (let* ((editable (hmn-ensure-editable node edit))
 		      (array (hmn-array editable))
 		      (2idx (* 2 idx)))
-		 (declare (type fixnum 2idx))
+		 (declare (type uint 2idx))
 		 (array-copy array 2idx array
-			     (the fixnum (* 2 (the fixnum (1+ idx))))
-			     (the fixnum (* 2 (the fixnum (- n idx)))))
+			     (the uint (* 2 (the uint (1+ idx))))
+			     (the uint (* 2 (the uint (- n idx)))))
 		 (setf (aref array 2idx) key)
 		 (setf (aref array (1+ (* 2 idx))) val)
 		 (setf (hmn-bitmap editable) (logior bit (hmn-bitmap editable)))
@@ -593,12 +600,12 @@
 	      (t
 	       (let ((new-array (make-array (* 2 (1+ n)) :initial-element nil))
 		     (2idx (* 2 idx)))
-		 (declare (type fixnum 2idx))
+		 (declare (type uint 2idx))
 		 (array-copy array 0 new-array 0 2idx)
 		 (setf (aref new-array (* 2 idx)) key)
 		 (setf (box-val added-leaf) added-leaf)
 		 (setf (aref new-array (1+ 2idx)) val)
-		 (array-copy array 2idx new-array (the fixnum (+ 2 2idx)) (the fixnum (* 2 (the fixnum (- n idx)))))
+		 (array-copy array 2idx new-array (the uint (+ 2 2idx)) (the uint (* 2 (the uint (- n idx)))))
 		 (let* ((editable (hmn-ensure-editable node edit)))
 		   (setf (hmn-array editable) new-array)
 		   (setf (hmn-bitmap editable) (logior (hmn-bitmap editable) bit))
@@ -606,42 +613,43 @@
 
 (defmethod node-assoc ((node hash-map-bitmap-node) shift hash key val added-leaf)
   (declare (optimize (speed 3) (safety 0))
-	   (type fixnum shift hash))
+	   (type uint hash)
+	   (type fixnum shift))
   (with-accessors ((bitmap hmn-bitmap)
 		   (array hmn-array))
       node
     (let* ((bit (bitpos hash shift))
 	   (idx (hmn-index node bit)))
-      (declare (type fixnum idx bit))
+      (declare (type uint idx bit))
       (if (/= 0 (logand bitmap bit))
-	  (let ((key-or-null (aref array (the fixnum (* 2 idx))))
-		(value-or-node (aref array (the fixnum (1+ (* 2 idx))))))
+	  (let ((key-or-null (aref array (the uint (* 2 idx))))
+		(value-or-node (aref array (the uint (1+ (* 2 idx))))))
 	    (cond
 	      ((null key-or-null)
 	       (let ((n (node-assoc value-or-node (shift-right shift) hash key val added-leaf)))
 		 (if (equal n value-or-node)
 		     node
 		     (make-hash-map-bitmap-node :bitmap bitmap
-						:array (clone-and-set array (the fixnum (1+ (* 2 idx))) n)))))
+						:array (clone-and-set array (the uint (1+ (* 2 idx))) n)))))
 	      ((equiv key key-or-null)
 	       (if (equal val value-or-node)
 		   node
 		   (make-hash-map-bitmap-node :bitmap bitmap
-					      :array (clone-and-set array (the fixnum (1+ (* 2 idx))) val))))
+					      :array (clone-and-set array (the uint (1+ (* 2 idx))) val))))
 	      (t
 	       (setf (box-val added-leaf) added-leaf)
 	       (make-hash-map-bitmap-node :bitmap bitmap
 					  :array (clone-and-set array
-								(the fixnum (* 2 idx)) nil
-								(the fixnum (1+ (* 2 idx)))
+								(the uint (* 2 idx)) nil
+								(the uint (1+ (* 2 idx)))
 								(create-node (shift-right shift) key-or-null value-or-node hash key val))))))
 	  ;; else
-	  (let ((n (the fixnum (logcount bitmap))))
+	  (let ((n (the uint (logcount bitmap))))
 	    (if (>= n 16)
 		(let* ((nodes (make-array +size+ :initial-element nil))
 		       (jdx (mask hash shift))
 		       (j 0))
-		  (declare (type fixnum j))
+		  (declare (type uint j))
 		  (setf (aref nodes jdx) (node-assoc *empty-hash-map-node* (shift-right shift) hash key val added-leaf))
 		  (dotimes (i +size+)
 		    (when (/= 0 (logand (ash bitmap (- i)) 1))
@@ -652,11 +660,11 @@
 		  (make-hash-map-array-node :count (1+ n) :array nodes))
 		;; else
 		(let ((new-array (make-array (* 2 (1+ n)) :initial-element nil)))
-		  (array-copy array 0 new-array 0 (the fixnum (* 2 idx)))
+		  (array-copy array 0 new-array 0 (the uint (* 2 idx)))
 		  (setf (aref new-array (* 2 idx)) key)
 		  (setf (box-val added-leaf) added-leaf)
 		  (setf (aref new-array (1+ (* 2 idx))) val)
-		  (array-copy array (the fixnum (* 2 idx)) new-array (the fixnum (* 2 (1+ idx))) (the fixnum (* 2 (- n idx))))
+		  (array-copy array (the uint (* 2 idx)) new-array (the uint (* 2 (1+ idx))) (the uint (* 2 (- n idx))))
 		  (make-hash-map-bitmap-node :bitmap (logior bitmap bit) :array new-array))))))))
 
 (defmethod node-find ((node hash-map-bitmap-node) shift hash key not-found)
@@ -666,14 +674,14 @@
 		   (array hmn-array))
       node
     (let ((bit (bitpos hash shift)))
-      (declare (type fixnum bit))
+      (declare (type uint bit))
       (if (= (logand bitmap bit) 0)
 	  not-found
 	  (let* ((idx (hmn-index node bit))
 		 (2idx (* 2 idx))
 		 (key-or-null (aref array 2idx))
 		 (val-or-node (aref array (1+ 2idx))))
-	    (declare (type fixnum idx 2idx))
+	    (declare (type uint idx 2idx))
 	    (cond ((not key-or-null) (node-find val-or-node (shift-right shift) hash key not-found))
 		  ((equiv key key-or-null) val-or-node)
 		  (t not-found)))))))
@@ -685,14 +693,14 @@
 		   (array hmn-array))
       this
     (let ((bit (bitpos hash shift)))
-      (declare (type fixnum bit))
+      (declare (type uint bit))
       (if (= 0 (logand bitmap bit))
 	  this
 	  (let* ((idx (hmn-index this bit))
 		 (2idx (* 2 idx))
 		 (key-or-null (aref array 2idx))
 		 (val-or-node (aref array (1+ 2idx))))
-	    (declare (type fixnum idx 2idx)
+	    (declare (type uint idx 2idx)
 		     (type hash-map-node val-or-node))
 	    (cond
 	      ((null key-or-null)
@@ -714,14 +722,14 @@
 		   (array hmn-array))
       node
     (let ((bit (bitpos hash shift)))
-      (declare (type fixnum bit))
+      (declare (type uint bit))
       (if (= 0 (logand bitmap bit))
 	  node
 	  (let* ((idx (hmn-index node bit))
 		 (2idx (* 2 idx))
 		 (key-or-null (aref array 2idx))
 		 (val-or-node (aref array (1+ 2idx))))
-	    (declare (type fixnum idx 2idx))
+	    (declare (type uint idx 2idx))
 	    (cond ((null key-or-null)
 		   (let ((n (node-without val-or-node (shift-right shift) hash key)))
 		     (cond ((eq n val-or-node) node)
@@ -748,7 +756,7 @@
 	   (type (simple-array t (*)) array))
   (let ((i 0)
 	nested-itr)
-    (declare (type fixnum i))
+    (declare (type uint i))
     (lambda ()
       (loop while t do
 	(cond (nested-itr
@@ -781,7 +789,7 @@
 
 (defmethod node-assoc ((node hash-map-collision-node) shift hash key val added-leaf)
   (declare (optimize (speed 3) (safety 0))
-	   (type fixnum hash))
+	   (type uint hash))
   (with-accessors ((this-hash hmcn-hash)
 		   (array hmcn-array)
 		   (count hmcn-count)
@@ -789,14 +797,14 @@
       node
     (if (= hash this-hash)
 	(let ((idx (hmcn-find-index node key)))
-	  (declare (type fixnum idx))
+	  (declare (type uint idx))
 	  (if (/= idx -1)
 	      (if (equal val (aref array (1+ idx)))
 		  node
 		  (make-hash-map-collision-node :edit nil :hash hash :count count
 						:array (clone-and-set array (1+ idx) val)))
 	      (let ((new-array (make-array (* 2 (1+ count)) :initial-element nil)))
-		(array-copy array 0 new-array 0 (the fixnum (* 2 count)))
+		(array-copy array 0 new-array 0 (the uint (* 2 count)))
 		(setf (aref new-array (* 2 count)) key)
 		(setf (aref new-array (1+ (* 2 count))) val)
 		(setf (box-val added-leaf) added-leaf)
@@ -807,9 +815,9 @@
 
 (defmethod node-without ((node hash-map-collision-node) shift hash key)
   (declare (optimize (speed 3) (safety 0))
-	   (type fixnum hash))
+	   (type uint hash))
   (let ((idx (hmcn-find-index node key)))
-    (declare (type fixnum idx))
+    (declare (type uint idx))
     (cond ((= idx -1) node)
 	  ((= (hmcn-count node) 1) nil)
 	  (t (make-hash-map-collision-node :edit nil
@@ -827,7 +835,7 @@
     (if (equal edit this-edit)
 	node
 	(let ((new-array (make-array (* 2 (1+ count)) :initial-element nil)))
-	  (array-copy array 0 new-array 0 (the fixnum (* 2 count)))
+	  (array-copy array 0 new-array 0 (the uint (* 2 count)))
 	  (make-hash-map-collision-node :edit edit
 					:hash hash
 					:count count
@@ -842,14 +850,14 @@
 
 (defmethod node-assoc-edit ((node hash-map-collision-node) edit shift hash key val added-leaf)
   (declare (optimize (speed 3) (safety 0))
-	   (type fixnum hash))
+	   (type uint hash))
   (with-accessors ((this-hash hmcn-hash)
 		   (array hmcn-array)
 		   (count hmcn-count))
       node
     (if (= hash this-hash)
 	(let ((idx (hmcn-find-index node key)))
-	  (declare (type fixnum idx))
+	  (declare (type uint idx))
 	  (cond ((/= idx -1)
 		 (if (equal val (aref array (1+ idx)))
 		     node
@@ -860,8 +868,8 @@
 		 (let* ((2count (* 2 count))
 			(editable (hmcn-edit-and-set node edit
 						     2count key
-						     (the fixnum (1+ 2count)) val)))
-		   (declare (type fixnum 2count))
+						     (the uint (1+ 2count)) val)))
+		   (declare (type uint 2count))
 		   (incf (hmcn-count editable))
 		   editable))))
 
@@ -875,7 +883,7 @@
 	   (type fixnum shift))
   (let ((idx (hmcn-find-index node key))
 	(count (hmcn-count node)))
-    (declare (type fixnum count idx))
+    (declare (type uint count idx))
     (if (= idx -1)
 	node
 	(progn
@@ -885,7 +893,7 @@
 		   (array (hmcn-array editable))
 		   (2count (* 2 count))
 		   (2idx (* 2 idx)))
-	      (declare (type fixnum 2count))
+	      (declare (type uint 2count))
 	      (setf (aref array idx) (aref array (- 2count 2)))
 	      (setf (aref array (1+ idx)) (aref array (1- 2count)))
 	      (setf (aref array (- 2idx 2)) nil)
@@ -897,7 +905,7 @@
   (declare (optimize (speed 3) (safety 0))
 	   (type fixnum shift))
   (let ((idx (hmcn-find-index node key)))
-    (declare (type fixnum idx))
+    (declare (type uint idx))
     (if (< idx 0)
 	not-found
 	(aref (hmcn-array node) (1+ idx)))))
@@ -912,7 +920,7 @@
 	   (type stream stream))
   (with-accessors ((count phm-count))
       map
-    (if (> count (the fixnum *max-print-length*))
+    (if (> count (the uint *max-print-length*))
 	(format stream "<Hash Trie Count:~a>" count)
 	(progn
 	  (write-char #\{ stream)
@@ -933,18 +941,18 @@
 	  (write-char #\} stream)))))
 
 (defun map-map (map fn)
-  (declare (optimize (speed 3) (safety 0)))
-  (check-type fn function)
-  (check-type map hash-trie)
+  (declare (optimize (speed 3) (safety 0))
+	   (type function fn)
+	   (type hash-trie map))
   (loop with itr of-type (function ()) = (map-make-iterator map)
 	for (remaining key val) = (multiple-value-list (funcall itr))
 	while remaining collect (funcall fn key val)))
 
 (defun map-reduce (map fn &optional start-val)
-  (declare (optimize (speed 3) (safety 0)))
-  (check-type fn function)
-  (check-type map hash-trie)
-  (loop with itr = (map-make-iterator map)
+  (declare (optimize (speed 3) (safety 0))
+	   (type function fn)
+	   (type hash-trie map))
+  (loop with itr = (the function (map-make-iterator map))
 	for (remaining key val) = (multiple-value-list (funcall itr))
 	while remaining
 	for result = (funcall fn start-val key val)

@@ -2,9 +2,11 @@
 
 (in-package #:hashtrie)
 
-(defconstant +bits+ 5)
-(defconstant +size+ (expt 2 +bits+))
-(defconstant +mask+ (1- +size+))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (deftype uint () '(unsigned-byte 32))
+  (defconstant +bits+ 5)
+  (defconstant +size+ (expt 2 +bits+))
+  (defconstant +mask+ (1- +size+)))
 
 (defun make-box ()
   (declare (optimize (speed 3) (safety 0)))
@@ -20,7 +22,7 @@
 (declaim (inline hash))
 (defun hash (x)
   (declare (optimize (speed 3) (safety 0)))
-   (sxhash x))
+  (the uint (mod (sxhash x) 4294967296)))
 
 (defmacro logandcount (n1 n2)
   `(logcount (logand ,n1 ,n2)))
