@@ -1,26 +1,29 @@
 ;;;; package.lisp
 
 (defpackage #:hashtrie
-  (:documentation "A fast implementation of the Hash Trie data structure, based on Clojure.")
+  (:documentation  "Persistent/Immutable Hash Trie datastructure based upon Clojure")
   (:use #:cl)
-  (:nicknames #:htr)
+  (:shadow
+   #:length
+   #:map
+   #:reduce
+   #:remove)
   (:export
    ;; Important functions
-   :make-hash-trie
-   :with-transient
-   :tri-add
-   :tri-remove
-   :tri-val
-   :tri-has-key
-   :tri-map
-   :tri-reduce
-   :tri-length
-   :*max-print-length*
+   #:make-hashtrie
+   #:with-transient
+   #:add
+   #:remove
+   #:value
+   #:has-key
+   #:map
+   #:reduce
+   #:length
 
    ;; Types
-   :hash-trie
-   :hash-trie-p
-   :persistent-hash-map
-   :persistent-hash-map-p
-   :transient-hash-map
-   :transient-hash-map-p))
+   #:hashtrie
+   #:hashtrie-p
+   #:persistent-hashtrie
+   #:persistent-hashtrie-p
+   #:transient-hashtrie
+   #:transient-hashtrie-p))

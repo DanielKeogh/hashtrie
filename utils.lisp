@@ -4,6 +4,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (deftype uint () '(unsigned-byte 32))
+  (declaim (type fixnum +bits+ +size+ +mask+))
   (defconstant +bits+ 5)
   (defconstant +size+ (expt 2 +bits+))
   (defconstant +mask+ (1- +size+)))
@@ -50,9 +51,9 @@
   (declare (optimize (speed 3) (safety 0))
 	   (type (simple-array t (*)) array)
 	   (type fixnum i))
-  (let ((new-array (make-array (- (length array) 2))))
+  (let ((new-array (make-array (- (cl:length array) 2))))
     (array-copy array 0 new-array 0 (the fixnum (* 2 i)))
     (array-copy array (the fixnum (* 2 (1+ i))) new-array
 		(the fixnum (* 2 i))
-		(the fixnum (- (length new-array) (* 2 i))))
+		(the fixnum (- (cl:length new-array) (* 2 i))))
     new-array))

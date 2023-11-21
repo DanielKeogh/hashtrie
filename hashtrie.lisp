@@ -2,19 +2,18 @@
 
 (in-package #:hashtrie)
 
-(defparameter *max-print-length* 1000)
 
-(defstruct (hash-trie (:constructor nil)))
-(defstruct (persistent-hash-map (:conc-name phm-)
-				(:include hash-trie))
-  (meta nil :type (or null hash-trie))
+(defstruct (hashtrie (:constructor nil)))
+(defstruct (persistent-hashtrie (:conc-name phm-)
+				(:include hashtrie))
+  (meta nil :type (or null hashtrie))
   (count nil :type uint :read-only t)
   (root nil :type (or null hash-map-node) :read-only t)
   (has-null nil :type boolean :read-only t)
   (null-value nil :read-only t))
 
-(defstruct (transient-hash-map (:conc-name thm-)
-			       (:include hash-trie))
+(defstruct (transient-hashtrie (:conc-name thm-)
+			       (:include hashtrie))
   (edit nil :read-only t)
   (count nil :type uint)
   (root nil :type (or null hash-map-node))
@@ -57,7 +56,7 @@
 
 (defvar *empty-hash-iterator* (lambda () (values nil nil nil)))
 (defvar *empty-hash-map-node* (make-hash-map-bitmap-node :bitmap 0 :array (make-array 0)))
-(defvar *empty-hash-map* (make-persistent-hash-map :count 0 :root nil :has-null nil :null-value nil))
+(defvar *empty-hash-map* (make-persistent-hashtrie :count 0 :root nil :has-null nil :null-value nil))
 (defvar *not-found* (gensym))
 
 (declaim (inline hmn-index))
@@ -71,7 +70,7 @@
   (declare (type uint hash)
 	   (type fixnum shift)
 	   (optimize (speed 3) (safety 0)))
-  (the uint (logand (ash hash (the fixnum (* -1 shift))) +mask+)))
+  (the uint (logand (ash hash (the fixnum (- shift))) +mask+)))
 
 (declaim (inline bitpos))
 (defun bitpos (hash shift)
@@ -115,21 +114,21 @@
 
 (defun phm-as-transient (map)
   (declare (optimize (speed 3) (safety 0)))
-  (make-transient-hash-map
+  (make-transient-hashtrie
    :edit (make-atomic-reference :val t)
    :count (phm-count map)
    :root (phm-root map)
    :has-null (phm-has-null map)
    :null-value (phm-null-value map)))
 
-(defun make-hash-trie (&rest args)
+(defun make-hashtrie (&rest args)
   (declare (optimize (speed 3) (safety 0)))
   (let ((r (phm-as-transient *empty-hash-map*)))
     (loop for (key val) on args by #'cddr
 	  do (setf r (map-assoc r key val)))
     (thm-persistent r)))
 
-(defmethod map-assoc ((m persistent-hash-map) key val)
+(defmethod map-assoc ((m persistent-hashtrie) key val)
   (declare (optimize (speed 3) (safety 0)))
   (with-accessors ((has-null phm-has-null)
 		   (null-value phm-null-value)
@@ -140,7 +139,7 @@
     (if (not key)
 	(if (and has-null (eq val null-value))
 	    m
-	    (make-persistent-hash-map :meta meta
+	    (make-persistent-hashtrie :meta meta
 				      :count (if has-null count (1+ count))
 				      :root root
 				      :has-null t
@@ -150,7 +149,7 @@
 				     0 (hash key) key val added-leaf)))
 	  (if (eq new-root root)
 	      m
-	      (make-persistent-hash-map :meta meta
+	      (make-persistent-hashtrie :meta meta
 					:count (if (box-val added-leaf)
 						   (1+ count)
 						   count)
@@ -158,7 +157,7 @@
 					:has-null has-null
 					:null-value null-value))))))
 
-(defmethod map-val-at ((map persistent-hash-map) key &optional not-found)
+(defmethod map-val-at ((map persistent-hashtrie) key &optional not-found)
   (declare (optimize (speed 3) (safety 0)))
   (with-accessors ((root phm-root)
 		   (has-null phm-has-null)
@@ -168,7 +167,7 @@
 	(if has-null null-value not-found)
 	(if root (node-find root 0 (hash key) key not-found) not-found))))
 
-(defmethod map-make-iterator ((map persistent-hash-map))
+(defmethod map-make-iterator ((map persistent-hashtrie))
   (declare (optimize (speed 3) (safety 0)))
   (with-accessors ((root phm-root)
 		   (has-null phm-has-null)
@@ -187,7 +186,7 @@
 		    (values t nil null-value)))))
 	  itr))))
 
-(defmethod map-without ((map persistent-hash-map) key)
+(defmethod map-without ((map persistent-hashtrie) key)
   (declare (optimize (speed 3) (safety 0)))
   (with-accessors ((meta phm-meta)
 		   (count phm-count)
@@ -195,7 +194,7 @@
 		   (has-null phm-has-null))
       map
     (cond ((null key) (if (phm-has-null map)
-			  (make-persistent-hash-map :meta meta
+			  (make-persistent-hashtrie :meta meta
 						    :count (the uint (1- count))
 						    :root root
 						    :has-null nil
@@ -204,17 +203,17 @@
 	  (t (let ((new-root (node-without root 0 (hash key) key)))
 	       (if (eq root new-root)
 		   map
-		   (make-persistent-hash-map :meta meta
+		   (make-persistent-hashtrie :meta meta
 					     :count (the uint (1- count))
 					     :root new-root
 					     :has-null has-null
 					     :null-value nil)))))))
 
-(defmethod map-count ((map persistent-hash-map))
+(defmethod map-count ((map persistent-hashtrie))
   (declare (optimize (speed 3) (safety 0)))
   (phm-count map))
 
-;;; transient-hash-map impl
+;;; transient-hashtrie impl
 
 (defun thm-do-assoc (map key val)
   (declare (optimize (speed 3) (safety 0)))
@@ -289,7 +288,7 @@
 		   (edit thm-edit))
       map
     (setf (atomic-reference-val edit) nil)
-    (make-persistent-hash-map :count count :root root
+    (make-persistent-hashtrie :count count :root root
 			      :has-null has-null :null-value null-value)))
 
 (defun thm-persistent (map)
@@ -297,22 +296,22 @@
   (thm-ensure-editable map)
   (thm-do-persistent map))
 
-(defmethod map-assoc ((map transient-hash-map) key value)
+(defmethod map-assoc ((map transient-hashtrie) key value)
   (declare (optimize (speed 3) (safety 0)))
   (thm-ensure-editable map)
   (thm-do-assoc map key value))
 
-(defmethod map-without ((map transient-hash-map) key)
+(defmethod map-without ((map transient-hashtrie) key)
   (declare (optimize (speed 3) (safety 0)))
   (thm-ensure-editable map)
   (thm-do-without map key))
 
-(defmethod map-val-at ((map transient-hash-map) key &optional not-found)
+(defmethod map-val-at ((map transient-hashtrie) key &optional not-found)
   (declare (optimize (speed 3) (safety 0)))
   (thm-ensure-editable map)
   (thm-do-val-at map key not-found))
 
-(defmethod map-make-iterator ((map transient-hash-map))
+(defmethod map-make-iterator ((map transient-hashtrie))
   (declare (optimize (speed 3) (safety 0)))
   (with-accessors ((root thm-root)
 		   (has-null thm-has-null)
@@ -330,7 +329,7 @@
 		  (funcall itr))))
 	  itr))))
 
-(defmethod map-count ((map transient-hash-map))
+(defmethod map-count ((map transient-hashtrie))
   (declare (optimize (speed 3) (safety 0)))
   (thm-count map))
 
@@ -410,7 +409,7 @@
 	  (setf (aref new-array j) (aref array i))
 	  (setf bitmap (logior bitmap (the uint (ash 1 i))))
 	  (incf j 2)))
-      (loop for i from (1+ idx) below (length array)
+      (loop for i from (1+ idx) below (cl:length array)
 	    for v = (aref array i)
 	    when v do
 	      (setf (aref new-array j) v)
@@ -489,7 +488,7 @@
 		       (return (values has-val key val))
 		       (progn (setf nested-itr nil)
 			      (incf i)))))
-		((< i (length array))
+		((< i (cl:length array))
 		 (let ((n (aref array i)))
 		   (if n
 		       (setf nested-itr (node-make-iterator n))
@@ -526,7 +525,7 @@
     (when (/= (the uint bitmap) bit)
       (let* ((editable (hmn-ensure-editable node edit))
 	     (array (hmn-array editable))
-	     (array-len (length array)))
+	     (array-len (cl:length array)))
 	(setf (hmn-bitmap editable) (logxor (hmn-bitmap editable) bit))
 	(let* ((new-len (* 2 (the uint (1+ i))))
 	       (i2 (* 2 i))
@@ -570,7 +569,7 @@
 	  ;; else
 	  (let ((n (logcount bitmap)))
 	    (cond
-	      ((< (* 2 n) (length array))
+	      ((< (* 2 n) (cl:length array))
 	       (setf (box-val added-leaf) added-leaf)
 	       (let* ((editable (hmn-ensure-editable node edit))
 		      (array (hmn-array editable))
@@ -765,7 +764,7 @@
 		 (if has-val
 		     (return (values has-val key val))
 		     (setf nested-itr nil))))
-	      ((< i (length array))
+	      ((< i (cl:length array))
 	       (let ((key (aref array i))
 		     (val (aref array (1+ i))))
 		 (incf i 2)
@@ -863,7 +862,7 @@
 		     node
 		     (hmcn-edit-and-set node edit (1+ idx) val)))
 
-		((> (length array) (* 2 count))
+		((> (cl:length array) (* 2 count))
 		 (setf (box-val added-leaf) added-leaf)
 		 (let* ((2count (* 2 count))
 			(editable (hmcn-edit-and-set node edit
@@ -915,35 +914,38 @@
 
 ;; Print
 
-(defmethod print-object ((map persistent-hash-map) stream)
+(defmethod print-object ((map persistent-hashtrie) stream)
   (declare (optimize (speed 3) (safety 0))
 	   (type stream stream))
   (with-accessors ((count phm-count))
       map
-    (if (> count (the uint *max-print-length*))
-	(format stream "<Hash Trie Count:~a>" count)
-	(progn
-	  (write-char #\{ stream)
-	  (loop with itr of-type (function ()) = (map-make-iterator map)
-		for (remaining key val) = (multiple-value-list (funcall itr))
-		  then (list nremaining nkey nval)
-		for (nremaining nkey nval) = (if remaining
-						 (multiple-value-list (funcall itr))
-						 (list nil nil nil))
-		  then (multiple-value-list (funcall itr))
-
-		for cnt from 0
-		while (and remaining (< cnt 1000))
-		do (prin1 key stream)
-		   (write-char #\  stream)
-		   (prin1 val stream)
-		   (when nremaining (princ ", " stream)))
-	  (write-char #\} stream)))))
+    (write-char #\{ stream)
+    (loop with print-length = (and (not *print-readably*) *print-length*)
+	  with itr of-type (function ()) = (map-make-iterator map)
+	  for (remaining key val) = (multiple-value-list (funcall itr))
+	    then (list nremaining nkey nval)
+	  for (nremaining nkey nval) = (if remaining
+					   (multiple-value-list (funcall itr))
+					   (list nil nil nil))
+	    then (multiple-value-list (funcall itr))
+	  
+	  for cnt from 0
+	  while remaining
+	  when (and (numberp print-length) (>= cnt print-length))
+	    do
+	       (princ "..." stream)
+	       (return)
+	  end
+	  do (prin1 key stream)
+	     (write-char #\  stream)
+	     (prin1 val stream)
+	     (when nremaining (princ ", " stream)))
+    (write-char #\} stream)))
 
 (defun map-map (map fn)
   (declare (optimize (speed 3) (safety 0))
-	   (type function fn)
-	   (type hash-trie map))
+	   (type hashtrie map)
+	   (type function fn))
   (loop with itr of-type (function ()) = (map-make-iterator map)
 	for (remaining key val) = (multiple-value-list (funcall itr))
 	while remaining collect (funcall fn key val)))
@@ -952,7 +954,7 @@
   (declare (optimize (speed 3) (safety 0))
 	   (type function fn)
 	   (type hash-trie map))
-  (loop with itr = (the function (map-make-iterator map))
+  (loop with itr = (map-make-iterator map)
 	for (remaining key val) = (multiple-value-list (funcall itr))
 	while remaining
 	for result = (funcall fn start-val key val)

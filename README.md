@@ -4,74 +4,82 @@ A fast [Hash trie](https://en.wikipedia.org/wiki/Hash_tree_(persistent_data_stru
 
 A Hash Trie works like a Hash Set, except that it has been optimised for immutability and thread-safety.
 
-By default, hash-trie's are persistent and immutable, but this implementation also supports transients for building sets significantly faster.
+By default, hashtrie's are persistent and immutable, but this implementation also supports transients for building sets significantly faster.
 
 ## Usage
+
+Given that hashtrie collides with several important function definitions in the `:common-lisp` namespace it is recommended that this library is used with a local nickname. For example, like this:
+
+```lisp
+(defpackage my-package
+    (:use #:cl)
+    (:local-nicknames (#:htr #:hashtrie)))
+```
 
 Constructor:
 
 ```lisp
-(htr:make-hash-trie nil "foo" 1 "bar")
+(htr:make-hashtrie nil "foo" 1 "bar")
 ;; {nil "foo", 1 "bar"}
 ```
 
 Construct with transience:
 
 ```lisp
-(htr:with-transient (trans (htr:make-hash-trie))
-	(htr:tri-add trans 1 "bar")
-	(htr:tri-add trans nil "foo"))
+(htr:with-transient (trans (htr:make-hashtrie))
+                    (htr:add trans 1 "bar")
+                    (htr:add trans nil "foo"))
 ;; {nil "foo", 1 "bar"}
 ```
 
 Adding:
 
 ```lisp
-(htr:tri-add (htr:make-hash-trie 1 "foo") 1 "bar")
+(htr:add (htr:make-hashtrie 1 "foo") 1 "bar")
 ;; {1 "bar"}
 ```
 
 Removing:
 ```lisp
-(htr:tri-remove (htr:make-hash-trie 1 1 2 2) 1)
+(htr:remove (htr:make-hashtrie 1 1 2 2) 1)
 ;; {2 2}
 ```
 
 Finding values:
 ```lisp
-(htr:tri-val (htr:make-hash-trie 1 "foo" 2 "bar") 1)
+(htr:value (htr:make-hashtrie 1 "foo" 2 "bar") 1)
 ;; "foo"
 ```
 
 Testing keys:
 ```lisp
-(htr:tri-has-key (htr:make-hash-trie 1 1 2 2) 1)
+(htr:has-key (htr:make-hashtrie 1 1 2 2) 1)
 ;; T
-(htr:tri-has-key (htr:make-hash-trie 1 1 2 2) 100)
+(htr:has-key (htr:make-hashtrie 1 1 2 2) 100)
 ;; nil
 ```
 
 Length/Count:
 
 ```lisp
-(htr:tri-length (htr:make-hash-trie 1 "foo" 2 "bar"))
+(htr:length (htr:make-hashtrie 1 "foo" 2 "bar"))
 ;; 2
 ```
 
 Mapping:
 
 ```lisp
-(htr:tri-map (htr:make-hash-trie 1 100 2 200 3 300)
-	     (lambda (key val) (+ key val))
+(htr:map (htr:make-hashtrie 1 100 2 200 3 300)
+         (lambda (key val) (+ key val))
 ;; (101 202 303)
 ```
 
 Reduce:
 
 ```lisp
-(htr:tri-reduce (htr:make-hash-trie 1 0 2 0 3 0)
-	     	(lambda (start key val) (+ start key val))
-		0)
+(htr:reduce (htr:make-hashtrie 1 0 2 0 3 0)
+            (lambda (start key val) (+ start key val))
+            0)
 ;; 6
 ```
 
@@ -91,14 +99,14 @@ Has only been tested on SBCL, and CLisp.
 
 ## Benchmarking
 
-Running SBCL, for comparison between using hash-trie and SBCL's own implementation of hashset, you can see that building SBCL's hashset is a bit over 10x faster. This is to be expected because it isn't immutable.
+Running SBCL, for comparison between using hashtrie and SBCL's own implementation of hashset, you can see that building SBCL's hashset is a bit over 10x faster. This is to be expected because it isn't immutable.
 
 *hashtrie*
 
 ```lisp
 CL-USER> (time (loop for i from 0 to 1000000
-	       for map = (htr:make-hash-trie i i) then (htr:tri-add map i i)
-	       finally (return map)))
+             for map = (htr:make-hashtrie i i) then (htr:add map i i)
+             finally (return map)))
 ;Evaluation took:
 ;  1.158 seconds of real time
 ;  1.163023 seconds of total run time (1.002477 user, 0.160546 system)
@@ -109,9 +117,9 @@ CL-USER> (time (loop for i from 0 to 1000000
 ```
 
 ```lisp
-(time (htr:with-transient (trans (htr:make-hash-trie))
-	   (dotimes (i 1000000)
-	     (htr:tri-add trans i i))))
+(time (htr:with-transient (trans (htr:make-hashtrie))
+         (dotimes (i 1000000)
+            (htr:add trans i i))))
 ;Evaluation took:
 ;  0.640 seconds of real time
 ;  0.640942 seconds of total run time (0.557056 user, 0.083886 system)
@@ -125,8 +133,8 @@ CL-USER> (time (loop for i from 0 to 1000000
 
 ```lisp
 (time (let ((m (make-hash-table :test 'equal)))
-		 (dotimes (i 1000000)
-		   (setf (gethash i m) i))))
+                 (dotimes (i 1000000)
+                   (setf (gethash i m) i))))
 ; Evaluation took:
 ;  0.170 seconds of real time
 ;  0.171739 seconds of total run time (0.152880 user, 0.018859 system)
@@ -141,15 +149,15 @@ Also comparing the performance to clojure. Building a hash trie in sbcl is still
 ```clojure
 ;Clojure 1.10.2
 (defn persistent-build-map [set n]
-     (if (> n 0)
-     	 (recur (assoc set n n) (dec n))
-	 set))
+    (if (> n 0)
+        (recur (assoc set n n) (dec n))
+        set))
 
 (defn transient-build-map [n]
       (loop [i 0 v (transient {})]
-      	    (if (< i n)
-      	    (recur (inc i) (assoc! v i i))
-      	    (persistent! v))))
+            (if (< i n)
+            (recur (inc i) (assoc! v i i))
+            (persistent! v))))
 
 (time (count (persistent-build-map {} 1000000)))
 ;"Elapsed time: 606.96371 msecs"
