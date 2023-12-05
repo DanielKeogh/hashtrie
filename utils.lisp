@@ -9,6 +9,7 @@
   (defconstant +size+ (expt 2 +bits+))
   (defconstant +mask+ (1- +size+)))
 
+(declaim (inline make-box))
 (defun make-box ()
   (declare (optimize (speed 3) (safety 0)))
   (cons nil nil))
@@ -33,6 +34,7 @@
   (declare (optimize (speed 3) (safety 0)))
   (equal v1 v2))
 
+(declaim (inline copy-simple-array))
 (defun copy-simple-array (arr)
   (declare (optimize (speed 3) (safety 0))
 	   (type (simple-array t (*)) arr))
@@ -57,3 +59,25 @@
 		(the fixnum (* 2 i))
 		(the fixnum (- (cl:length new-array) (* 2 i))))
     new-array))
+
+(defmacro for-true-bits32 ((mask-var int) &body body)
+  (let ((x (gensym)))
+    `(loop for ,x of-type (unsigned-byte 32) = ,int then (logand ,x (- ,x 1))
+	   for ,mask-var = (logand ,x (- ,x))
+	   while (> ,mask-var 0)
+	   do (progn ,@body))))
+
+(declaim (type (simple-array (integer 0 67) 1) *mask32->position-lookup*))
+(defparameter *mask32->position-lookup*
+  (loop with lookup = (make-array 67 :element-type '(integer 0 67) :initial-element 0)
+	for m from 0 below 64
+	for i = 1 then (ash i 1)
+	do (setf (aref lookup (mod i 67)) m)
+	finally (return lookup)))
+
+(declaim (inline mask32->position))
+(defun mask32->position (mask)
+  (declare (optimize (speed 3) (safety 0))
+	   (type (unsigned-byte 32) mask)
+	   (type (simple-array (integer 0 67) 1) *mask32->position-lookup*))
+  (aref *mask32->position-lookup* (mod mask 67)))
